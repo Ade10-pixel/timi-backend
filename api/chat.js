@@ -1,5 +1,3 @@
-import Groq from 'groq-sdk';
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -35,8 +33,6 @@ export default async function handler(req, res) {
       factsContext = `\nKnown User Facts: ${factsStr}`;
     }
 
-    const groq = new Groq({ apiKey });
-
     const systemInstruction = `You are Timi, a cool, witty, and loyal male best friend who lives inside a pixel-art canvas.
 
 STRICT VOICE RULES:
@@ -65,14 +61,28 @@ CANVAS EXPRESSION TAG:
       messagesPayload.push({ role: 'user', content: message });
     }
 
-    const chatCompletion = await groq.chat.completions.create({
-      messages: messagesPayload,
-      model: 'llama3-8b-8192',
-      temperature: 0.65,
-      max_tokens: 200,
+    // Direct HTTP fetch to Groq API (bypasses SDK 404 bugs entirely)
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: messagesPayload,
+        temperature: 0.65,
+        max_tokens: 200
+      })
     });
 
-    const replyText = chatCompletion.choices[0]?.message?.content || '';
+    if (!groqResponse.ok) {
+      const errText = await groqResponse.text();
+      throw new Error(`Groq API error: ${groqResponse.status} - ${errText}`);
+    }
+
+    const data = await groqResponse.json();
+    const replyText = data.choices[0]?.message?.content || '';
 
     let expression = 'happy';
     const match = replyText.match(/\[EXPRESSION:(happy\vert{}thinking\vert{}shocked\vert{}sad\vert{}laughing)\]/i);
