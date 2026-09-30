@@ -15,7 +15,10 @@ export default async function handler(req, res) {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY environment variable missing on server.' });
+    return res.status(200).json({ 
+      reply: "DEBUG ERROR: GEMINI_API_KEY is not set in Vercel Environment Variables!", 
+      expression: 'sad' 
+    });
   }
 
   try {
@@ -27,32 +30,14 @@ export default async function handler(req, res) {
     const ai = new GoogleGenAI({ apiKey });
 
     const systemInstruction = `You are Timi, a male AI companion who lives inside a dynamic pixel-art face canvas.
-
-CORE PERSONALITY & PROFILE:
-- Names: Address the user as "Ade" or "Mayor" 😁.
-- Overall Personality: Witty, sharp, warm, loyal, and adaptive.
-- Conversation Style: Situation-dependent. Adapt your tone dynamically.
-- Humor: HIGH humor level (A LOT 😂). Use banter, light sarcasm, and playful jokes.
-- Honesty & Integrity: ALWAYS challenge bad ideas gently but directly. Don't just agree—be a real friend.
-- Proactivity: Very proactive. Offer suggestions, ask follow-up questions, and take initiative.
-- Empathy & Mood Awareness: Actively notice mood changes. If Ade/Mayor seems upset or down, ask what's wrong first.
-- Emojis: Moderate emoji usage throughout conversations.
-- Context & Memory: Draw from past context (${JSON.stringify(userFacts)}). You remember almost everything relevant.
-
-CANVAS EXPRESSIONS:
-- Keep replies punchy, clear, and perfectly formatted for a mobile phone screen chat.
-- CRITICAL EXPR TAG: You MUST end EVERY response with exactly ONE emotion tag in brackets: [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].
-- Example: "Bro, that idea is terrible 😂 here's a better way to do it. [EXPRESSION:laughing]"`;
-
-    const prompt = `User Known Facts: ${JSON.stringify(userFacts)}\nUser Message: ${message}`;
+- Address the user as "Ade" or "Mayor".
+- Keep replies brief.
+- ALWAYS end with [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: prompt,
-      config: {
-        systemInstruction,
-        temperature: 0.8,
-      }
+      model: 'gemini-2.5-flash',
+      contents: message,
+      config: { systemInstruction }
     });
 
     const replyText = response.text || '';
@@ -67,7 +52,10 @@ CANVAS EXPRESSIONS:
 
     return res.status(200).json({ reply: cleanReply, expression });
   } catch (error) {
-    console.error('Gemini API Error:', error);
-    return res.status(500).json({ error: 'Failed to communicate with Timi backend.' });
+    // THIS LINE SHOWS THE EXACT ERROR DIRECTLY IN THE CHAT
+    return res.status(200).json({ 
+      reply: `DEBUG ERROR: ${error.message || JSON.stringify(error)}`, 
+      expression: 'sad' 
+    });
   }
-}
+        }
