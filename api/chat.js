@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import Groq from 'groq-sdk';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -13,9 +13,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY missing on server.' });
+    return res.status(500).json({ error: 'GROQ_API_KEY environment variable missing on server.' });
   }
 
   try {
@@ -32,7 +32,7 @@ export default async function handler(req, res) {
       factsContext = `\nKnown User Facts: ${factsStr}`;
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    const groq = new Groq({ apiKey });
 
     const systemInstruction = `You are Timi, a male AI companion who lives inside a dynamic pixel-art face canvas.
 
@@ -51,30 +51,17 @@ CANVAS EXPRESSIONS:
 - CRITICAL EXPR TAG: You MUST end EVERY response with exactly ONE emotion tag in brackets: [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].
 - Example: "Bro, that idea is terrible 😂 here's a better way to do it. [EXPRESSION:laughing]"`;
 
-    // Internal retry loop for 503 high demand
-    let response;
-    let attempts = 0;
-    const maxAttempts = 3;
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: systemInstruction },
+        { role: 'user', content: message }
+      ],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.8,
+      max_tokens: 500,
+    });
 
-    while (attempts < maxAttempts) {
-      try {
-        response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: message,
-          config: {
-            systemInstruction: systemInstruction,
-            temperature: 0.8,
-          }
-        });
-        break;
-      } catch (err) {
-        attempts++;
-        if (attempts >= maxAttempts) throw err;
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-    }
-
-    const replyText = response?.text || '';
+    const replyText = chatCompletion.choices[0]?.message?.content || '';
 
     let expression = 'happy';
     const match = replyText.match(/\[EXPRESSION:(happy\vert{}thinking\vert{}shocked\vert{}sad\vert{}laughing)\]/i);
@@ -86,13 +73,11 @@ CANVAS EXPRESSIONS:
 
     return res.status(200).json({ reply: cleanReply, expression });
   } catch (error) {
-    console.error('Gemini Backend Error:', error);
-    // Expose the raw error so we never guess again
+    console.error('Groq Backend Error:', error);
     const errText = error?.message || String(error);
     return res.status(200).json({ 
       reply: `Backend Error: ${errText}`, 
       expression: 'sad' 
     });
   }
-    }
-      
+}
