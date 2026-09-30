@@ -14,6 +14,7 @@ let currentExpression = 'happy';
 let isTalking = false;
 let isBlinking = false;
 
+// Blink loop
 setInterval(() => {
   if (Math.random() > 0.3) {
     isBlinking = true;
@@ -40,10 +41,9 @@ function clearCanvas() {
 function drawFace() {
   clearCanvas();
   
-  // Sleek dark-slate monochrome palette
-  const skinColor = '#313244';   // Dark slate grey
-  const eyeColor = '#b4befe';    // Soft muted lavender
-  const mouthColor = '#a6adc8';  // Muted light grey
+  const skinColor = '#313244';   
+  const eyeColor = '#b4befe';    
+  const mouthColor = '#a6adc8';  
 
   for (let x = 6; x < 26; x++) {
     for (let y = 6; y < 26; y++) {
@@ -120,7 +120,7 @@ function drawMouth(expression, talking, color) {
 }
 
 function speakText(text, expression) {
-  currentExpression = expression;
+  currentExpression = expression || 'happy';
   isTalking = true;
 
   const talkInterval = setInterval(() => {
@@ -135,11 +135,58 @@ function speakText(text, expression) {
   }, Math.min(text.length * 50, 4000));
 }
 
+// ==========================================
+// MEMORY & VERCEL BACKEND INTEGRATION
+// ==========================================
+async function sendTimiMessage(userInput) {
+  if (!userInput.trim()) return;
+
+  // 1. Save user message to memory.js
+  if (window['timiMemory']) {
+    window['timiMemory'].saveChatMessage('user', userInput);
+  }
+
+  // 2. Grab recent chat history from memory for context (last 6 messages)
+  const history = window['timiMemory'] ? window['timiMemory'].data.chatHistory.slice(-6) : [];
+
+  try {
+    // 3. Make fetch request to your Vercel backend
+    const response = await fetch('https://timi-backend.vercel.app/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: userInput,
+        history: history
+      })
+    });
+
+    const data = await response.json();
+    const reply = data.reply || "My brain blanked for a sec.";
+    const expression = data.expression || 'happy';
+
+    // 4. Save Timi's reply and expression to memory
+    if (window['timiMemory']) {
+      window['timiMemory'].saveChatMessage('assistant', reply, expression);
+    }
+
+    // 5. Trigger canvas speech animation & expression change!
+    speakText(reply, expression);
+
+    return { reply, expression };
+
+  } catch (err) {
+    console.error('Frontend Fetch Error:', err);
+    speakText("Backend connection failed, Mayor.", "sad");
+  }
+}
+
 window['setTimiExpression'] = (expr) => {
   currentExpression = expr;
   drawFace();
 };
 
 window['speakTimiText'] = speakText;
+window['sendTimiMessage'] = sendTimiMessage;
 
 drawFace();
+    
