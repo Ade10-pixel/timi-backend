@@ -15,7 +15,10 @@ export default async function handler(req, res) {
 
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'GROQ_API_KEY environment variable missing on server.' });
+    return res.status(200).json({ 
+      reply: "Backend Error: GROQ_API_KEY environment variable missing in Vercel!", 
+      expression: 'sad' 
+    });
   }
 
   try {
@@ -34,6 +37,28 @@ export default async function handler(req, res) {
 
     const groq = new Groq({ apiKey });
 
+    // Step 1: Auto-discover active models available on your specific Groq key
+    const modelList = await groq.models.list();
+    const activeModelIds = modelList.data.map(m => m.id);
+
+    // Fallback queue: Picks the first model string active in your account
+    const preferredModels = [
+      'llama-3.1-8b-instant',
+      'llama-3.3-70b-versatile',
+      'llama3-8b-8192',
+      'llama3-70b-8192',
+      'mixtral-8x7b-32768'
+    ];
+
+    const selectedModel = preferredModels.find(m => activeModelIds.includes(m)) || activeModelIds[0];
+
+    if (!selectedModel) {
+      return res.status(200).json({
+        reply: "Backend Error: No active models found on your Groq API key.",
+        expression: 'sad'
+      });
+    }
+
     const systemInstruction = `You are Timi, a male AI companion who lives inside a dynamic pixel-art face canvas.
 
 CORE PERSONALITY & PROFILE:
@@ -51,12 +76,13 @@ CANVAS EXPRESSIONS:
 - CRITICAL EXPR TAG: You MUST end EVERY response with exactly ONE emotion tag in brackets: [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].
 - Example: "Bro, that idea is terrible 😂 here's a better way to do it. [EXPRESSION:laughing]"`;
 
+    // Step 2: Make the chat call with the verified available model
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         { role: 'system', content: systemInstruction },
         { role: 'user', content: message }
       ],
-      model: 'llama-3.1-8b-instant',
+      model: selectedModel,
       temperature: 0.8,
       max_tokens: 500,
     });
@@ -80,4 +106,4 @@ CANVAS EXPRESSIONS:
       expression: 'sad' 
     });
   }
-}
+      }
