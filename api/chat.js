@@ -51,7 +51,7 @@ CANVAS EXPRESSIONS:
 - CRITICAL EXPR TAG: You MUST end EVERY response with exactly ONE emotion tag in brackets: [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].
 - Example: "Bro, that idea is terrible 😂 here's a better way to do it. [EXPRESSION:laughing]"`;
 
-    // Internal retry loop targeting gemini-3.8-flash
+    // Internal retry loop for 503 high demand
     let response;
     let attempts = 0;
     const maxAttempts = 3;
@@ -70,7 +70,7 @@ CANVAS EXPRESSIONS:
       } catch (err) {
         attempts++;
         if (attempts >= maxAttempts) throw err;
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     }
 
@@ -87,10 +87,12 @@ CANVAS EXPRESSIONS:
     return res.status(200).json({ reply: cleanReply, expression });
   } catch (error) {
     console.error('Gemini Backend Error:', error);
+    // Expose the raw error so we never guess again
+    const errText = error?.message || String(error);
     return res.status(200).json({ 
-      reply: "My bad Mayor, hit a small glitch! Say that again? 😂", 
-      expression: 'thinking' 
+      reply: `Backend Error: ${errText}`, 
+      expression: 'sad' 
     });
   }
-}
-  
+    }
+      
