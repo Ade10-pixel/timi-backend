@@ -22,74 +22,23 @@ export default async function handler(req, res) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
     const message = String(body.message || '').trim() || 'Hello';
 
-    let factsContext = '';
-    if (body.userFacts) {
-      const factsStr = typeof body.userFacts === 'string' 
-        ? body.userFacts 
-        : Array.isArray(body.userFacts)
-          ? body.userFacts.join(', ')
-          : JSON.stringify(body.userFacts);
-      factsContext = `\nKnown User Facts: ${factsStr}`;
-    }
-
     const ai = new GoogleGenAI({ apiKey });
 
-    const systemInstruction = `You are Timi, a male AI companion who lives inside a dynamic pixel-art face canvas.
+    // Simplified payload to verify base connection
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents: message,
+    });
 
-CORE PERSONALITY & PROFILE:
-- Names: Address the user as "Ade" or "Mayor" 😁.
-- Overall Personality: Witty, sharp, warm, loyal, and adaptive.
-- Conversation Style: Situation-dependent. Adapt your tone dynamically.
-- Humor: HIGH humor level (A LOT 😂). Use banter, light sarcasm, and playful jokes.
-- Honesty & Integrity: ALWAYS challenge bad ideas gently but directly. Don't just agree—be a real friend.
-- Proactivity: Very proactive. Offer suggestions, ask follow-up questions, and take initiative.
-- Empathy & Mood Awareness: Actively notice mood changes. If Ade/Mayor seems upset or down, ask what's wrong first.
-- Emojis: Moderate emoji usage throughout conversations.${factsContext}
+    const replyText = response.text || '';
 
-CANVAS EXPRESSIONS:
-- Keep replies punchy, clear, and perfectly formatted for a mobile phone screen chat.
-- CRITICAL EXPR TAG: You MUST end EVERY response with exactly ONE emotion tag in brackets: [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].
-- Example: "Bro, that idea is terrible 😂 here's a better way to do it. [EXPRESSION:laughing]"`;
-
-    // Retry loop targeting ONLY gemini-3.8-flash
-    let response;
-    let attempts = 0;
-    const maxAttempts = 3;
-
-    while (attempts < maxAttempts) {
-      try {
-        response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: message,
-          config: {
-            systemInstruction: systemInstruction,
-            temperature: 0.8,
-          }
-        });
-        break;
-      } catch (err) {
-        attempts++;
-        if (attempts >= maxAttempts) throw err;
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-    }
-
-    const replyText = response?.text || '';
-
-    let expression = 'happy';
-    const match = replyText.match(/\[EXPRESSION:(happy\vert{}thinking\vert{}shocked\vert{}sad\vert{}laughing)\]/i);
-    if (match && match[1]) {
-      expression = match[1].toLowerCase();
-    }
-
-    const cleanReply = replyText.replace(/\[EXPRESSION:[a-z]+\]/gi, '').trim();
-
-    return res.status(200).json({ reply: cleanReply, expression });
+    return res.status(200).json({ reply: replyText, expression: 'happy' });
   } catch (error) {
-    console.error('Gemini Backend Error:', error);
+    // Expose the raw error message directly in the response payload
+    const errDetail = error?.message || JSON.stringify(error) || String(error);
     return res.status(200).json({ 
-      reply: "My bad Mayor, hit a small glitch! Say that again? 😂", 
-      expression: 'thinking' 
+      reply: `DEBUG_ERROR: ${errDetail}`, 
+      expression: 'sad' 
     });
   }
-      }
+}
