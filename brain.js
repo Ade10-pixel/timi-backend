@@ -2,19 +2,15 @@ async function sendMessageToTimi(userMessage) {
   const memoryInstance = window['timiMemory'];
   const userName = memoryInstance ? memoryInstance.getUserName() : 'Ade';
   const userFacts = memoryInstance ? memoryInstance.getFacts() : [];
-  
-  // Grab the last 6 messages from local storage memory for conversation context
-  const history = memoryInstance ? memoryInstance.data.chatHistory.slice(-6) : [];
 
   try {
-    const response = await fetch('https://timi-backend.vercel.app/api/chat', {
+    const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message: userMessage,
         userName,
-        userFacts,
-        history // Sending history to Vercel so Timi remembers you!
+        userFacts
       })
     });
 
@@ -27,7 +23,7 @@ async function sendMessageToTimi(userMessage) {
   } catch (error) {
     console.error('Brain fetch error:', error);
     return {
-      reply: "Yo Ade, my backend isn't reaching Vercel right now. Check your connection!",
+      reply: "Yo Ade, my backend brain isn't reaching Vercel right now. Double check the API key on your dashboard!",
       expression: 'sad'
     };
   }
