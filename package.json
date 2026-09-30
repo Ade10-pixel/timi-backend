@@ -1,11 +1,13 @@
 {
-  "name": "timi-ai-companion",
+  "name": "timi-backend",
   "version": "1.0.0",
+  "description": "Backend API for Timi pixel-art AI companion",
+  "main": "api/chat.js",
   "type": "module",
   "scripts": {
-    "start": "vercel dev"
+    "start": "node api/chat.js"
   },
   "dependencies": {
-    "@google/genai": "latest"
+    "groq-sdk": "^0.9.0"
   }
 }
