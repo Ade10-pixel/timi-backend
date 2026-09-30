@@ -21,7 +21,6 @@ export default async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const message = body?.message || '';
-    const userName = body?.userName || 'Ade';
     const userFacts = body?.userFacts || [];
 
     const ai = new GoogleGenAI({ apiKey });
@@ -68,6 +67,10 @@ CANVAS EXPRESSIONS:
     return res.status(200).json({ reply: cleanReply, expression });
   } catch (error) {
     console.error('Gemini API Error:', error);
-    return res.status(500).json({ error: 'Failed to communicate with Timi backend.' });
+    // Return a natural Timi response if any intermittent backend hiccup occurs
+    return res.status(200).json({ 
+      reply: "My bad Ade, got a little brain freeze there 😅. Say that again?", 
+      expression: 'thinking' 
+    });
   }
 }
