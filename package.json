@@ -6,6 +6,6 @@
     "start": "vercel dev"
   },
   "dependencies": {
-    "@google/genai": "^0.1.1"
+    "@google/genai": "latest"
   }
 }
