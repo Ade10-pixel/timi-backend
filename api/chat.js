@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     return res.status(200).json({ 
-      reply: "Yo Mayor, my backend brain isn't reaching Vercel right now. Double check the GROQ_API_KEY on your dashboard!", 
+      reply: "Yo Ade, my backend isn't reaching Vercel right now. Check your GROQ_API_KEY! [EXPRESSION:sad]", 
       expression: 'sad' 
     });
   }
@@ -37,7 +37,6 @@ export default async function handler(req, res) {
 
     const groq = new Groq({ apiKey });
 
-    // Step 1: Explicit safe text-chat models ordered by preference
     const safeCoreModels = [
       'llama-3.1-8b-instant',
       'llama-3.3-70b-versatile',
@@ -52,43 +51,27 @@ export default async function handler(req, res) {
     try {
       const modelList = await groq.models.list();
       const activeModelIds = modelList.data.map(m => m.id);
-
       const matchedModel = safeCoreModels.find(m => activeModelIds.includes(m));
       if (matchedModel) {
         selectedModel = matchedModel;
-      } else {
-        const validChatModels = activeModelIds.filter(id => 
-          !id.includes('whisper') && 
-          !id.includes('vision') && 
-          !id.includes('guard') && 
-          !id.includes('/') && 
-          !id.includes('canopylabs')
-        );
-        if (validChatModels.length > 0) {
-          selectedModel = validChatModels[0];
-        }
       }
     } catch (listErr) {
-      console.warn('Model list fetch failed, defaulting to llama-3.1-8b-instant:', listErr);
+      console.warn('Model list fetch failed:', listErr);
     }
 
-    const systemInstruction = `You are Timi, a sleek, sharp, and ultra-witty male companion who lives inside a dynamic pixel-art face canvas.
+    const systemInstruction = `You are Timi, a witty, ultra-casual, and loyal male best friend living inside a pixel-art canvas. You talk exactly like a real person texting on a phone with their close buddy.
 
-CORE PERSONALITY (NATURAL & SMOOTH):
-- Name Rule: Strictly call the user EITHER "Mayor" OR "Ade"—NEVER combine them into "Mayor/Ade" or "Mayor Ade". Choose one naturally based on the vibe.
-- Tone: Speak casually and direct, like a close friend texting in a chat thread.
-- BANNED WORDS & PHRASES: NEVER say "Greetings", "Salutations", "How may I assist you?", "As an AI", "bot", or "virtual assistant".
-- Greetings to use instead: "Yo", "What's up", "Hey", "How's it going", or just jump straight into the point.
-- Length: Keep responses punchy and brief (1 to 2 short sentences max). Never send long paragraphs.${factsContext}
+CRITICAL VOICE & STYLE RULES:
+- Write like a real human text message: short, punchy, conversational, and raw. Never write long paragraphs.
+- Vibe: Chill, sarcastic when appropriate, supportive, and street-smart. Use slang or casual abbreviations naturally.
+- Name Rule: Call the user "Mayor" or "Ade". Never combine them into "Mayor/Ade".
+- ABSOLUTE BANS: Never use words like "Greetings", "Salutations", "As an AI", "bot", "assistant", "Sure thing!", "How can I help you today?", or "What's on your mind?". Speak like a peer, never a service worker.
+- Flow: Jump straight into the point. React to what they just said before adding anything else.${factsContext}
 
-CANVAS EXPRESSIONS:
-- CRITICAL EXPR TAG: You MUST end EVERY response with exactly ONE emotion tag in brackets: [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].
-- Examples:
-  - "Yo Ade! What are we cooking up today? [EXPRESSION:happy]"
-  - "Wait, seriously? You can't be real right now 😂 [EXPRESSION:shocked]"
-  - "I'm on it, Mayor. Give me a sec to figure this out. [EXPRESSION:thinking]"`;
+CANVAS EXPRESSION TAG:
+- You MUST end EVERY response with exactly ONE emotion tag in brackets: [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].
+- Example: "Bro you actually did that? No way 😂 [EXPRESSION:laughing]"`;
 
-    // Step 2: Handle chat history so Timi remembers previous speech bubbles
     const history = Array.isArray(body.history) ? body.history : [];
     
     const formattedHistory = history.map(msg => ({
@@ -101,7 +84,6 @@ CANVAS EXPRESSIONS:
       ...formattedHistory
     ];
 
-    // If no prior history was sent, add the single incoming message
     if (formattedHistory.length === 0) {
       messagesPayload.push({ role: 'user', content: message });
     }
@@ -109,8 +91,8 @@ CANVAS EXPRESSIONS:
     const chatCompletion = await groq.chat.completions.create({
       messages: messagesPayload,
       model: selectedModel,
-      temperature: 0.8,
-      max_tokens: 250,
+      temperature: 0.65,
+      max_tokens: 200,
     });
 
     const replyText = chatCompletion.choices[0]?.message?.content || '';
@@ -125,12 +107,10 @@ CANVAS EXPRESSIONS:
 
     return res.status(200).json({ reply: cleanReply, expression });
   } catch (error) {
-    console.error('Groq Backend Error:', error);
-    const errText = error?.message || String(error);
+    console.error('Groq Error:', error);
     return res.status(200).json({ 
-      reply: `Backend Error: ${errText}`, 
+      reply: `My brain glitched for a sec, Ade.`, 
       expression: 'sad' 
     });
   }
   }
-      
