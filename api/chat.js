@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY environment variable missing on server.' });
+    return res.status(500).json({ error: 'GEMINI_API_KEY missing on server.' });
   }
 
   try {
@@ -51,7 +51,7 @@ CANVAS EXPRESSIONS:
 - CRITICAL EXPR TAG: You MUST end EVERY response with exactly ONE emotion tag in brackets: [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].
 - Example: "Bro, that idea is terrible 😂 here's a better way to do it. [EXPRESSION:laughing]"`;
 
-    // Retry loop targeting stable gemini-2.0-flash
+    // Internal retry loop targeting gemini-3.8-flash
     let response;
     let attempts = 0;
     const maxAttempts = 3;
@@ -59,7 +59,7 @@ CANVAS EXPRESSIONS:
     while (attempts < maxAttempts) {
       try {
         response = await ai.models.generateContent({
-          model: 'gemini-2.0-flash',
+          model: 'gemini-3.8-flash',
           contents: message,
           config: {
             systemInstruction: systemInstruction,
@@ -70,7 +70,7 @@ CANVAS EXPRESSIONS:
       } catch (err) {
         attempts++;
         if (attempts >= maxAttempts) throw err;
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 800));
       }
     }
 
