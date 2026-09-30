@@ -20,9 +20,8 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-    const message = String(body.message || '').trim();
+    const message = String(body.message || '').trim() || 'Hello';
     
-    // Convert facts array/object into plain string to prevent crash
     let factsContext = '';
     if (body.userFacts) {
       const factsStr = typeof body.userFacts === 'string' 
@@ -50,15 +49,11 @@ CANVAS EXPRESSIONS:
 - CRITICAL EXPR TAG: You MUST end EVERY response with exactly ONE emotion tag in brackets: [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].
 - Example: "Bro, that idea is terrible 😂 here's a better way to do it. [EXPRESSION:laughing]"`;
 
-    const fullPrompt = `${factsContext}User Message: ${message}`;
+    const promptText = `${systemInstruction}\n\n${factsContext}User Message: ${message}`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.8-flash',
-      contents: fullPrompt,
-      config: {
-        systemInstruction,
-        temperature: 0.8,
-      }
+      contents: promptText,
     });
 
     const replyText = response.text || '';
@@ -73,10 +68,10 @@ CANVAS EXPRESSIONS:
 
     return res.status(200).json({ reply: cleanReply, expression });
   } catch (error) {
-    console.error('Gemini Backend Processing Error:', error);
+    console.error('Gemini Backend Error Details:', error?.message || error);
     return res.status(200).json({ 
       reply: "My bad Mayor, hit a small glitch! What were you saying? 😂", 
       expression: 'thinking' 
     });
   }
-}
+  }
