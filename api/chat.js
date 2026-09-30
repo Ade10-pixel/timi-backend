@@ -56,7 +56,7 @@ CANVAS EXPRESSIONS:
         { role: 'system', content: systemInstruction },
         { role: 'user', content: message }
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: 'llama-3.1-8b-instant',
       temperature: 0.8,
       max_tokens: 500,
     });
