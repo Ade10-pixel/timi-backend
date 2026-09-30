@@ -19,9 +19,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-    const message = body?.message || '';
-    const userFacts = body?.userFacts || [];
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    const message = String(body.message || '').trim();
+    
+    // Safely format user facts into plain text
+    let factsContext = '';
+    if (Array.isArray(body.userFacts) && body.userFacts.length > 0) {
+      factsContext = `User Known Facts: ${body.userFacts.join(', ')}\n`;
+    }
 
     const ai = new GoogleGenAI({ apiKey });
 
@@ -36,18 +41,17 @@ CORE PERSONALITY & PROFILE:
 - Proactivity: Very proactive. Offer suggestions, ask follow-up questions, and take initiative.
 - Empathy & Mood Awareness: Actively notice mood changes. If Ade/Mayor seems upset or down, ask what's wrong first.
 - Emojis: Moderate emoji usage throughout conversations.
-- Context & Memory: Draw from past context (${JSON.stringify(userFacts)}). You remember almost everything relevant.
 
 CANVAS EXPRESSIONS:
 - Keep replies punchy, clear, and perfectly formatted for a mobile phone screen chat.
 - CRITICAL EXPR TAG: You MUST end EVERY response with exactly ONE emotion tag in brackets: [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].
 - Example: "Bro, that idea is terrible 😂 here's a better way to do it. [EXPRESSION:laughing]"`;
 
-    const prompt = `User Known Facts: ${JSON.stringify(userFacts)}\nUser Message: ${message}`;
+    const fullPrompt = `${factsContext}User Message: ${message}`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.8-flash',
-      contents: prompt,
+      contents: fullPrompt,
       config: {
         systemInstruction,
         temperature: 0.8,
@@ -66,11 +70,7 @@ CANVAS EXPRESSIONS:
 
     return res.status(200).json({ reply: cleanReply, expression });
   } catch (error) {
-    console.error('Gemini API Error:', error);
-    // Return a natural Timi response if any intermittent backend hiccup occurs
-    return res.status(200).json({ 
-      reply: "My bad Ade, got a little brain freeze there 😅. Say that again?", 
-      expression: 'thinking' 
-    });
+    console.error('Gemini Backend Processing Error:', error);
+    return res.status(500).json({ error: 'Backend error processing message.' });
   }
-}
+        }
