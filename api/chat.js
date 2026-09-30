@@ -78,4 +78,4 @@ CANVAS EXPRESSIONS:
       expression: 'thinking' 
     });
   }
-      }
+}
