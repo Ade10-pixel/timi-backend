@@ -37,7 +37,7 @@ export default async function handler(req, res) {
 
     const groq = new Groq({ apiKey });
 
-    // Step 1: Safe model preference list
+    // Step 1: Explicit safe text-chat models ordered by preference
     const safeCoreModels = [
       'llama-3.1-8b-instant',
       'llama-3.3-70b-versatile',
@@ -53,17 +53,25 @@ export default async function handler(req, res) {
       const modelList = await groq.models.list();
       const activeModelIds = modelList.data.map(m => m.id);
 
+      // Match against known text chat models first
       const matchedModel = safeCoreModels.find(m => activeModelIds.includes(m));
       if (matchedModel) {
         selectedModel = matchedModel;
       } else {
-        const unGatedModels = activeModelIds.filter(id => !id.includes('/') && !id.includes('canopylabs'));
-        if (unGatedModels.length > 0) {
-          selectedModel = unGatedModels[0];
+        // Filter out audio (whisper), vision, guard, or gated models
+        const validChatModels = activeModelIds.filter(id => 
+          !id.includes('whisper') && 
+          !id.includes('vision') && 
+          !id.includes('guard') && 
+          !id.includes('/') && 
+          !id.includes('canopylabs')
+        );
+        if (validChatModels.length > 0) {
+          selectedModel = validChatModels[0];
         }
       }
     } catch (listErr) {
-      console.warn('Model list fetch failed, falling back to default model:', listErr);
+      console.warn('Model list fetch failed, defaulting to llama-3.1-8b-instant:', listErr);
     }
 
     const systemInstruction = `You are Timi, a male AI companion who lives inside a dynamic pixel-art face canvas.
@@ -112,5 +120,4 @@ CANVAS EXPRESSIONS:
       expression: 'sad' 
     });
   }
-            }
-      
+}
