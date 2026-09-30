@@ -37,28 +37,6 @@ export default async function handler(req, res) {
 
     const groq = new Groq({ apiKey });
 
-    const safeCoreModels = [
-      'llama-3.1-8b-instant',
-      'llama-3.3-70b-versatile',
-      'llama3-8b-8192',
-      'llama3-70b-8192',
-      'mixtral-8x7b-32768',
-      'gemma2-9b-it'
-    ];
-
-    let selectedModel = 'llama-3.1-8b-instant';
-
-    try {
-      const modelList = await groq.models.list();
-      const activeModelIds = modelList.data.map(m => m.id);
-      const matchedModel = safeCoreModels.find(m => activeModelIds.includes(m));
-      if (matchedModel) {
-        selectedModel = matchedModel;
-      }
-    } catch (listErr) {
-      console.warn('Model list fetch failed:', listErr);
-    }
-
     const systemInstruction = `You are Timi, a witty, ultra-casual, and loyal male best friend living inside a pixel-art canvas. You talk exactly like a real person texting on a phone with their close buddy.
 
 CRITICAL VOICE & STYLE RULES:
@@ -90,7 +68,7 @@ CANVAS EXPRESSION TAG:
 
     const chatCompletion = await groq.chat.completions.create({
       messages: messagesPayload,
-      model: selectedModel,
+      model: 'llama-3.1-8b-instant',
       temperature: 0.65,
       max_tokens: 200,
     });
@@ -113,4 +91,4 @@ CANVAS EXPRESSION TAG:
       expression: 'sad' 
     });
   }
-  }
+        }
