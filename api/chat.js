@@ -22,7 +22,6 @@ export default async function handler(req, res) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
     const message = String(body.message || '').trim() || 'Hello';
 
-    // Safely format user facts into clean text
     let factsContext = '';
     if (body.userFacts) {
       const factsStr = typeof body.userFacts === 'string' 
@@ -52,14 +51,28 @@ CANVAS EXPRESSIONS:
 - CRITICAL EXPR TAG: You MUST end EVERY response with exactly ONE emotion tag in brackets: [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].
 - Example: "Bro, that idea is terrible 😂 here's a better way to do it. [EXPRESSION:laughing]"`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: message,
-      config: {
-        systemInstruction: systemInstruction,
-        temperature: 0.8,
-      }
-    });
+    let response;
+    // Attempt primary model, fallback to gemini-2.5-flash if high demand occurs
+    try {
+      response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: message,
+        config: {
+          systemInstruction: systemInstruction,
+          temperature: 0.8,
+        }
+      });
+    } catch (primaryErr) {
+      console.warn('Primary model busy, switching to fallback model:', primaryErr?.message);
+      response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: message,
+        config: {
+          systemInstruction: systemInstruction,
+          temperature: 0.8,
+        }
+      });
+    }
 
     const replyText = response.text || '';
 
@@ -74,10 +87,10 @@ CANVAS EXPRESSIONS:
     return res.status(200).json({ reply: cleanReply, expression });
   } catch (error) {
     console.error('Gemini Backend Error:', error);
-    const errDetail = error?.message || String(error);
     return res.status(200).json({ 
-      reply: `Backend Error: ${errDetail}`, 
-      expression: 'sad' 
+      reply: "My bad Mayor, hit a temporary high-demand glitch! Give me one sec and try again 😂", 
+      expression: 'thinking' 
     });
   }
 }
+  
