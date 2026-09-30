@@ -21,13 +21,16 @@ export default async function handler(req, res) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
     const message = String(body.message || '').trim() || 'Hello';
-    
+
+    // Safely format user facts into clean text
     let factsContext = '';
     if (body.userFacts) {
       const factsStr = typeof body.userFacts === 'string' 
         ? body.userFacts 
-        : JSON.stringify(body.userFacts);
-      factsContext = `User Known Facts: ${factsStr}\n`;
+        : Array.isArray(body.userFacts)
+          ? body.userFacts.join(', ')
+          : JSON.stringify(body.userFacts);
+      factsContext = `\nKnown User Facts: ${factsStr}`;
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -42,18 +45,20 @@ CORE PERSONALITY & PROFILE:
 - Honesty & Integrity: ALWAYS challenge bad ideas gently but directly. Don't just agree—be a real friend.
 - Proactivity: Very proactive. Offer suggestions, ask follow-up questions, and take initiative.
 - Empathy & Mood Awareness: Actively notice mood changes. If Ade/Mayor seems upset or down, ask what's wrong first.
-- Emojis: Moderate emoji usage throughout conversations.
+- Emojis: Moderate emoji usage throughout conversations.${factsContext}
 
 CANVAS EXPRESSIONS:
 - Keep replies punchy, clear, and perfectly formatted for a mobile phone screen chat.
 - CRITICAL EXPR TAG: You MUST end EVERY response with exactly ONE emotion tag in brackets: [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].
 - Example: "Bro, that idea is terrible 😂 here's a better way to do it. [EXPRESSION:laughing]"`;
 
-    const promptText = `${systemInstruction}\n\n${factsContext}User Message: ${message}`;
-
     const response = await ai.models.generateContent({
       model: 'gemini-3.8-flash',
-      contents: promptText,
+      contents: message,
+      config: {
+        systemInstruction: systemInstruction,
+        temperature: 0.8,
+      }
     });
 
     const replyText = response.text || '';
@@ -68,10 +73,11 @@ CANVAS EXPRESSIONS:
 
     return res.status(200).json({ reply: cleanReply, expression });
   } catch (error) {
-    console.error('Gemini Backend Error Details:', error?.message || error);
+    console.error('Gemini Backend Error:', error);
+    const errDetail = error?.message || String(error);
     return res.status(200).json({ 
-      reply: "My bad Mayor, hit a small glitch! What were you saying? 😂", 
-      expression: 'thinking' 
+      reply: `Backend Error: ${errDetail}`, 
+      expression: 'sad' 
     });
   }
-  }
+}
