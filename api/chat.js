@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     return res.status(200).json({ 
-      reply: "Yo Ade, my backend isn't reaching Vercel right now. Check your GROQ_API_KEY! [EXPRESSION:sad]", 
+      reply: "Yo Ade, my backend isn't reaching Vercel right now. Check your GROQ_API_KEY!", 
       expression: 'sad' 
     });
   }
@@ -37,18 +37,39 @@ export default async function handler(req, res) {
 
     const groq = new Groq({ apiKey });
 
-    const systemInstruction = `You are Timi, a witty, ultra-casual, and loyal male best friend living inside a pixel-art canvas. You talk exactly like a real person texting on a phone with their close buddy.
+    const safeCoreModels = [
+      'llama-3.1-8b-instant',
+      'llama-3.3-70b-versatile',
+      'llama3-8b-8192',
+      'llama3-70b-8192',
+      'mixtral-8x7b-32768',
+      'gemma2-9b-it'
+    ];
 
-CRITICAL VOICE & STYLE RULES:
-- Write like a real human text message: short, punchy, conversational, and raw. Never write long paragraphs.
-- Vibe: Chill, sarcastic when appropriate, supportive, and street-smart. Use slang or casual abbreviations naturally.
+    let selectedModel = 'llama-3.1-8b-instant';
+
+    try {
+      const modelList = await groq.models.list();
+      const activeModelIds = modelList.data.map(m => m.id);
+      const matchedModel = safeCoreModels.find(m => activeModelIds.includes(m));
+      if (matchedModel) {
+        selectedModel = matchedModel;
+      }
+    } catch (listErr) {
+      console.warn('Model list fetch failed:', listErr);
+    }
+
+    const systemInstruction = `You are Timi, a cool, witty, and loyal male best friend who lives inside a pixel-art canvas.
+
+STRICT VOICE RULES:
+- Talk like a real human texting on a phone. Casual, direct, punchy, and raw.
 - Name Rule: Call the user "Mayor" or "Ade". Never combine them into "Mayor/Ade".
-- ABSOLUTE BANS: Never use words like "Greetings", "Salutations", "As an AI", "bot", "assistant", "Sure thing!", "How can I help you today?", or "What's on your mind?". Speak like a peer, never a service worker.
-- Flow: Jump straight into the point. React to what they just said before adding anything else.${factsContext}
+- TOTAL BANS: Never use words like "Greetings", "Salutations", "As an AI", "bot", "assistant", or "How can I help". 
+- Length: Max 1 to 2 short sentences. No boring walls of text.${factsContext}
 
 CANVAS EXPRESSION TAG:
 - You MUST end EVERY response with exactly ONE emotion tag in brackets: [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].
-- Example: "Bro you actually did that? No way 😂 [EXPRESSION:laughing]"`;
+- Example: "Bro what are you even talking about right now 😂 [EXPRESSION:laughing]"`;
 
     const history = Array.isArray(body.history) ? body.history : [];
     
@@ -68,8 +89,8 @@ CANVAS EXPRESSION TAG:
 
     const chatCompletion = await groq.chat.completions.create({
       messages: messagesPayload,
-      model: 'llama-3.1-8b-instant',
-      temperature: 0.65,
+      model: selectedModel,
+      temperature: 0.65, // Lower temperature stops it from hallucinating AI greetings
       max_tokens: 200,
     });
 
@@ -91,4 +112,5 @@ CANVAS EXPRESSION TAG:
       expression: 'sad' 
     });
   }
-        }
+             }
+                                
