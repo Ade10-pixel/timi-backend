@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     return res.status(200).json({ 
-      reply: "Backend Error: GROQ_API_KEY environment variable missing in Vercel!", 
+      reply: "Yo Mayor, my backend brain isn't reaching Vercel right now. Double check the GROQ_API_KEY on your dashboard!", 
       expression: 'sad' 
     });
   }
@@ -37,11 +37,7 @@ export default async function handler(req, res) {
 
     const groq = new Groq({ apiKey });
 
-    // Step 1: Discover active models
-    const modelList = await groq.models.list();
-    const activeModelIds = modelList.data.map(m => m.id);
-
-    // Step 2: Safe models list (filters out third-party terms-gated models)
+    // Step 1: Safe model preference list
     const safeCoreModels = [
       'llama-3.1-8b-instant',
       'llama-3.3-70b-versatile',
@@ -51,13 +47,23 @@ export default async function handler(req, res) {
       'gemma2-9b-it'
     ];
 
-    // Select the first safe model available, ignoring external gated models
-    let selectedModel = safeCoreModels.find(m => activeModelIds.includes(m));
+    let selectedModel = 'llama-3.1-8b-instant';
 
-    // Fallback if none match the list specifically
-    if (!selectedModel) {
-      const un-gated = activeModelIds.filter(id => !id.includes('/') && !id.includes('canopylabs'));
-      selectedModel = un-gated[0] || 'llama-3.1-8b-instant';
+    try {
+      const modelList = await groq.models.list();
+      const activeModelIds = modelList.data.map(m => m.id);
+
+      const matchedModel = safeCoreModels.find(m => activeModelIds.includes(m));
+      if (matchedModel) {
+        selectedModel = matchedModel;
+      } else {
+        const unGatedModels = activeModelIds.filter(id => !id.includes('/') && !id.includes('canopylabs'));
+        if (unGatedModels.length > 0) {
+          selectedModel = unGatedModels[0];
+        }
+      }
+    } catch (listErr) {
+      console.warn('Model list fetch failed, falling back to default model:', listErr);
     }
 
     const systemInstruction = `You are Timi, a male AI companion who lives inside a dynamic pixel-art face canvas.
@@ -106,5 +112,5 @@ CANVAS EXPRESSIONS:
       expression: 'sad' 
     });
   }
-                                             }
+            }
       
