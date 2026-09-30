@@ -51,16 +51,30 @@ CANVAS EXPRESSIONS:
 - CRITICAL EXPR TAG: You MUST end EVERY response with exactly ONE emotion tag in brackets: [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].
 - Example: "Bro, that idea is terrible 😂 here's a better way to do it. [EXPRESSION:laughing]"`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: message,
-      config: {
-        systemInstruction: systemInstruction,
-        temperature: 0.8,
-      }
-    });
+    // Automatic retry mechanism for temporary 503 high-demand spikes
+    let response;
+    let attempts = 0;
+    const maxAttempts = 3;
 
-    const replyText = response.text || '';
+    while (attempts < maxAttempts) {
+      try {
+        response = await ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: message,
+          config: {
+            systemInstruction: systemInstruction,
+            temperature: 0.8,
+          }
+        });
+        break; // Successfully got a response, exit loop
+      } catch (err) {
+        attempts++;
+        if (attempts >= maxAttempts) throw err; // Throw to outer catch if retries fail
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait 1 second before retrying
+      }
+    }
+
+    const replyText = response?.text || '';
 
     let expression = 'happy';
     const match = replyText.match(/\[EXPRESSION:(happy\vert{}thinking\vert{}shocked\vert{}sad\vert{}laughing)\]/i);
@@ -78,4 +92,4 @@ CANVAS EXPRESSIONS:
       expression: 'thinking' 
     });
   }
-}
+           }
