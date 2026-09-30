@@ -90,7 +90,7 @@ CANVAS EXPRESSION TAG:
     const chatCompletion = await groq.chat.completions.create({
       messages: messagesPayload,
       model: selectedModel,
-      temperature: 0.65, // Lower temperature stops it from hallucinating AI greetings
+      temperature: 0.65,
       max_tokens: 200,
     });
 
@@ -112,5 +112,4 @@ CANVAS EXPRESSION TAG:
       expression: 'sad' 
     });
   }
-             }
-                                
+      }
