@@ -51,28 +51,14 @@ CANVAS EXPRESSIONS:
 - CRITICAL EXPR TAG: You MUST end EVERY response with exactly ONE emotion tag in brackets: [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].
 - Example: "Bro, that idea is terrible 😂 here's a better way to do it. [EXPRESSION:laughing]"`;
 
-    let response;
-    // Attempt primary model, fallback to gemini-2.5-flash if high demand occurs
-    try {
-      response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: message,
-        config: {
-          systemInstruction: systemInstruction,
-          temperature: 0.8,
-        }
-      });
-    } catch (primaryErr) {
-      console.warn('Primary model busy, switching to fallback model:', primaryErr?.message);
-      response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: message,
-        config: {
-          systemInstruction: systemInstruction,
-          temperature: 0.8,
-        }
-      });
-    }
+    const response = await ai.models.generateContent({
+      model: 'gemini-1.5-flash',
+      contents: message,
+      config: {
+        systemInstruction: systemInstruction,
+        temperature: 0.8,
+      }
+    });
 
     const replyText = response.text || '';
 
@@ -88,9 +74,8 @@ CANVAS EXPRESSIONS:
   } catch (error) {
     console.error('Gemini Backend Error:', error);
     return res.status(200).json({ 
-      reply: "My bad Mayor, hit a temporary high-demand glitch! Give me one sec and try again 😂", 
+      reply: "My bad Mayor, hit a small glitch! Say that again? 😂", 
       expression: 'thinking' 
     });
   }
-}
-  
+      }
