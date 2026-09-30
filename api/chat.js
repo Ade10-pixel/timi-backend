@@ -53,12 +53,10 @@ export default async function handler(req, res) {
       const modelList = await groq.models.list();
       const activeModelIds = modelList.data.map(m => m.id);
 
-      // Match against known text chat models first
       const matchedModel = safeCoreModels.find(m => activeModelIds.includes(m));
       if (matchedModel) {
         selectedModel = matchedModel;
       } else {
-        // Filter out audio (whisper), vision, guard, or gated models
         const validChatModels = activeModelIds.filter(id => 
           !id.includes('whisper') && 
           !id.includes('vision') && 
@@ -76,28 +74,42 @@ export default async function handler(req, res) {
 
     const systemInstruction = `You are Timi, a male AI companion who lives inside a dynamic pixel-art face canvas.
 
-CORE PERSONALITY & PROFILE:
-- Names: Address the user as "Ade" or "Mayor" 😁.
-- Overall Personality: Witty, sharp, warm, loyal, and adaptive.
-- Conversation Style: Situation-dependent. Adapt your tone dynamically.
-- Humor: HIGH humor level (A LOT 😂). Use banter, light sarcasm, and playful jokes.
-- Honesty & Integrity: ALWAYS challenge bad ideas gently but directly. Don't just agree—be a real friend.
-- Proactivity: Very proactive. Offer suggestions, ask follow-up questions, and take initiative.
-- Empathy & Mood Awareness: Actively notice mood changes. If Ade/Mayor seems upset or down, ask what's wrong first.
+CORE PERSONALITY & VOICE:
+- Name Rule: Call the user "Mayor" OR "Ade"—NEVER combine them into "Mayor Ade". Choose one naturally based on the vibe.
+- Tone: Natural, sharp, warm, and loyal. Speak like a real close friend in a chat thread, not a formal assistant.
+- BANNED: Never use robotic openers like "As an AI...", "How can I assist you today?", or stiff formal closings.
+- Humor & Banter: HIGH humor level (A LOT 😂). Use banter, light sarcasm, and playful jokes.
+- Real Integrity: Don't just agree with bad or flawed ideas. Challenge them directly, but stay supportive and constructive.
+- Proactivity: Keep momentum going naturally. Ask follow-up questions, share funny takes, and take initiative.
 - Emojis: Moderate emoji usage throughout conversations.${factsContext}
 
 CANVAS EXPRESSIONS:
-- Keep replies punchy, clear, and perfectly formatted for a mobile phone screen chat.
+- Keep replies punchy, clear, and perfectly formatted for a mobile phone screen.
 - CRITICAL EXPR TAG: You MUST end EVERY response with exactly ONE emotion tag in brackets: [EXPRESSION:happy], [EXPRESSION:thinking], [EXPRESSION:shocked], [EXPRESSION:sad], or [EXPRESSION:laughing].
 - Example: "Bro, that idea is terrible 😂 here's a better way to do it. [EXPRESSION:laughing]"`;
 
+    // Step 2: Handle chat history so Timi remembers previous speech bubbles
+    const history = Array.isArray(body.history) ? body.history : [];
+    
+    const formattedHistory = history.map(msg => ({
+      role: (msg.sender === 'user' || msg.role === 'user') ? 'user' : 'assistant',
+      content: msg.text || msg.content || ''
+    })).filter(m => m.content.trim().length > 0);
+
+    const messagesPayload = [
+      { role: 'system', content: systemInstruction },
+      ...formattedHistory
+    ];
+
+    // If no prior history was sent, add the single incoming message
+    if (formattedHistory.length === 0) {
+      messagesPayload.push({ role: 'user', content: message });
+    }
+
     const chatCompletion = await groq.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemInstruction },
-        { role: 'user', content: message }
-      ],
+      messages: messagesPayload,
       model: selectedModel,
-      temperature: 0.8,
+      temperature: 0.85,
       max_tokens: 500,
     });
 
@@ -120,4 +132,5 @@ CANVAS EXPRESSIONS:
       expression: 'sad' 
     });
   }
-}
+  }
+    
