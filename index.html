@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Timi AI Companion - V1</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="mobile-frame">
+    <div class="header">
+      <h2>Timi</h2>
+    </div>
+    <div class="canvas-container">
+      <canvas id="faceCanvas"></canvas>
+    </div>
+    <div class="chat-box" id="chatBox"></div>
+    <div class="input-area">
+      <textarea id="userInput" placeholder="Say something to Timi..." rows="1"></textarea>
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+
+  <script src="memory.js"></script>
+  <script src="app.js"></script>
+  <script src="brain.js"></script>
+  <script>
+    const chatBox = document.getElementById('chatBox');
+    const userInput = /** @type {HTMLTextAreaElement} */ (document.getElementById('userInput'));
+    const sendBtn = document.getElementById('sendBtn');
+
+    function appendMessage(sender, text) {
+      if (!chatBox) return;
+      const msg = document.createElement('div');
+      msg.classList.add('msg', sender);
+      msg.textContent = text;
+      chatBox.appendChild(msg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    async function handleSend() {
+      if (!userInput) return;
+      const text = userInput.value.trim();
+      if (!text) return;
+
+      userInput.value = '';
+      userInput.style.height = 'auto';
+      appendMessage('user', text);
+
+      const timiMemory = window['timiMemory'];
+      if (timiMemory) {
+        timiMemory.saveChatMessage('user', text);
+      }
+
+      if (window['setTimiExpression']) {
+        window['setTimiExpression']('thinking');
+      }
+
+      const sendMessageToTimi = window['sendMessageToTimi'];
+      const response = sendMessageToTimi ? await sendMessageToTimi(text) : { reply: 'Error', expression: 'sad' };
+
+      appendMessage('timi', response.reply);
+
+      if (timiMemory) {
+        timiMemory.saveChatMessage('timi', response.reply, response.expression);
+      }
+
+      if (window['speakTimiText']) {
+        window['speakTimiText'](response.reply, response.expression);
+      }
+    }
+
+    if (sendBtn) {
+      sendBtn.addEventListener('click', handleSend);
+    }
+
+    if (userInput) {
+      // Enter creates a new line. Shift + Enter triggers Send.
+      userInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.shiftKey) {
+          e.preventDefault();
+          handleSend();
+        }
+      });
+    }
+
+    appendMessage('timi', "Yo Ade! 😎 Timi V1 is live. What are we building today?");
+  </script>
+</body>
+</html>
