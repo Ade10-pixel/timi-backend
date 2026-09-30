@@ -22,10 +22,13 @@ export default async function handler(req, res) {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
     const message = String(body.message || '').trim();
     
-    // Safely format user facts into plain text
+    // Convert facts array/object into plain string to prevent crash
     let factsContext = '';
-    if (Array.isArray(body.userFacts) && body.userFacts.length > 0) {
-      factsContext = `User Known Facts: ${body.userFacts.join(', ')}\n`;
+    if (body.userFacts) {
+      const factsStr = typeof body.userFacts === 'string' 
+        ? body.userFacts 
+        : JSON.stringify(body.userFacts);
+      factsContext = `User Known Facts: ${factsStr}\n`;
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -71,6 +74,9 @@ CANVAS EXPRESSIONS:
     return res.status(200).json({ reply: cleanReply, expression });
   } catch (error) {
     console.error('Gemini Backend Processing Error:', error);
-    return res.status(500).json({ error: 'Backend error processing message.' });
+    return res.status(200).json({ 
+      reply: "My bad Mayor, hit a small glitch! What were you saying? 😂", 
+      expression: 'thinking' 
+    });
   }
-        }
+}
