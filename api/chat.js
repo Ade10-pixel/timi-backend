@@ -47,7 +47,7 @@ CANVAS EXPRESSIONS:
     const prompt = `User Known Facts: ${JSON.stringify(userFacts)}\nUser Message: ${message}`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-1.5-flash',
       contents: prompt,
       config: {
         systemInstruction,
